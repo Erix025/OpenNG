@@ -36,14 +36,10 @@ func (mgr *TlsMgr) Handle(c *tcp.Conn) tcp.SerRet {
 					}), "HTTP1")
 					return tcp.Upgrade
 				case "h2":
-					decodedTls := tls.Server(
-						c.TopConn(), &tls.Config{
-							Certificates: []tls.Certificate{*cert},
-							NextProtos:   []string{sp},
-						})
-					decodedTls.Handshake()
-					c.Upgrade(decodedTls, "HTTP2")
-					return tcp.Upgrade
+					// Skip h2: HTTP/2 WebSocket uses Extended CONNECT (RFC 8441)
+					// which we don't proxy, and our reverse proxy only detects
+					// HTTP/1.1 Upgrade. Force http/1.1 so WebSocket upgrade works.
+					continue
 				default:
 					c.Store(tcp.KeyTLS, sp)
 					continue

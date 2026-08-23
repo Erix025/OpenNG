@@ -144,6 +144,12 @@ func NewPBAuth() *policyBaseAuth {
 }
 
 func (mgr *policyBaseAuth) HandleAuth(ctx *http.HttpCtx) AuthRet {
+	// WebSocket upgrade 请求免鉴权，由后端服务的 token 认证兜底
+	// （orca 客户端用 deviceToken 认证，不带 OpenNG 的 session cookie）。
+	if strings.EqualFold(ctx.Req.Header.Get("Upgrade"), "websocket") {
+		return Accept
+	}
+
 	// First Lets get user info
 	var token = ctx.RemoveCookie(verfiyCookieKey)
 

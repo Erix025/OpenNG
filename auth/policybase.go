@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/base64"
 	"math/rand"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -144,9 +145,9 @@ func NewPBAuth() *policyBaseAuth {
 }
 
 func (mgr *policyBaseAuth) HandleAuth(ctx *http.HttpCtx) AuthRet {
-	// WebSocket upgrade 请求免鉴权，由后端服务的 token 认证兜底
-	// （orca 客户端用 deviceToken 认证，不带 OpenNG 的 session cookie）。
-	if strings.EqualFold(ctx.Req.Header.Get("Upgrade"), "websocket") {
+	// Orca 客户端用 deviceToken 认证，不带 OpenNG 的 session cookie。
+	// 其他站点的 WebSocket 必须继续经过 OpenNG 会话鉴权。
+	if strings.EqualFold(ctx.Req.Header.Get("Upgrade"), "websocket") && websocketAuthBypassed(ctx.Req.Host) {
 		return Accept
 	}
 
@@ -185,6 +186,13 @@ func (mgr *policyBaseAuth) HandleAuth(ctx *http.HttpCtx) AuthRet {
 
 	return Deny
 
+}
+
+func websocketAuthBypassed(host string) bool {
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	}
+	return strings.EqualFold(host, "orca.erix025.me")
 }
 
 func needAuth(ctx *http.HttpCtx) {
